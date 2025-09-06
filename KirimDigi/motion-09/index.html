@@ -1221,25 +1221,56 @@ function _pauseAudio(){
 			
 					<div class="wishes-container">
 						<div class="wishes-header" id="wishes-toggle">
-							<h3><i class="fas fa-comments"></i> <span id="wishes-count">2</span> Ucapan</h3>
+							<h3><i class="fas fa-comments"></i> <span id="wishes-count">0</span> Ucapan</h3>
 							<i class="fas fa-chevron-down" id="wishes-arrow"></i>
 						</div>
 						<div class="wishes-list" id="wishes-list" style="display: none;">
 							<!-- Wishes will be populated here -->
-							<div class="wish-item">
-								<p class="wish-author">Budi</p>
-								<p class="wish-text">Selamat ya Sisi &amp; Willy, semoga menjadi keluarga yang sakinah, mawaddah, warahmah.</p>
-								<small class="wish-meta">Hadir</small>
-							</div>
-							<div class="wish-item">
-								<p class="wish-author">Siti</p>
-								<p class="wish-text">Happy wedding! Semoga langgeng sampai kakek nenek.</p>
-								<small class="wish-meta">Hadir</small>
-							</div>
 						</div>
 					</div>
 					<script>
 					document.addEventListener('DOMContentLoaded', function() {
+						const WISHES_STORAGE_KEY = 'weddingWishes_SisiWilly'; // Unique key for this wedding
+
+						function loadWishes() {
+							const allWishes = JSON.parse(localStorage.getItem(WISHES_STORAGE_KEY)) || [];
+							const list = document.getElementById('wishes-list');
+							const wishesCountEl = document.getElementById('wishes-count');
+							if (!list || !wishesCountEl) return;
+
+							list.innerHTML = ''; // Clear list to prevent duplicates
+
+							// Display all wishes that are not "tidak-hadir"
+							allWishes.forEach(wish => {
+								if (wish.status !== 'tidak-hadir') {
+									const newWish = document.createElement('div');
+									newWish.className = 'wish-item';
+
+									let dateHtml = '';
+									if (wish.timestamp) {
+										const wishDate = new Date(wish.timestamp);
+										if (!isNaN(wishDate.getTime())) {
+											const formattedDate = wishDate.toLocaleString('id-ID', {
+												day: '2-digit', month: '2-digit', year: 'numeric',
+												hour: '2-digit', minute: '2-digit'
+											}).replace(/\./g, ':').replace(/\//g, '-');
+											dateHtml = `<small class="wish-meta" style="margin-left: 5px;">${formattedDate}</small>`;
+										}
+									}
+
+									newWish.innerHTML = `
+										<p class="wish-author">${wish.name}</p>
+										<p class="wish-text">${wish.message}</p>
+										<small class="wish-meta">${wish.statusText}</small>
+										${dateHtml}
+									`;
+									list.insertBefore(newWish, list.firstChild);
+								}
+							});
+
+							// Update the count to reflect ALL wishes, including "Tidak Hadir"
+							wishesCountEl.textContent = allWishes.length;
+						}
 						// Pre-fill guest name from URL
 						try {
 							const urlParams = new URLSearchParams(window.location.search);
@@ -1251,11 +1282,11 @@ function _pauseAudio(){
 						} catch(e) {
 							console.error("Error parsing URL params for guest name:", e);
 						}
-			
+
 						// Toggle wishes list
 						const wishesToggle = document.getElementById('wishes-toggle');
 						const wishesList = document.getElementById('wishes-list');
-			
+
 						if (wishesToggle && wishesList) {
 							wishesToggle.addEventListener('click', function() {
 								const isDisplayed = wishesList.style.display === 'block';
@@ -1263,47 +1294,42 @@ function _pauseAudio(){
 								wishesToggle.classList.toggle('open');
 							});
 						}
-			
+
+						// Load wishes on page load
+						loadWishes();
+
 						// Handle form submission
 						const rsvpForm = document.getElementById('rsvp-form');
 						if (rsvpForm) {
 							rsvpForm.addEventListener('submit', function(e) {
 								e.preventDefault();
-			
+
 								const nameInput = document.getElementById('guest-name');
 								const statusSelect = document.getElementById('attendance-status');
 								const messageInput = document.getElementById('guest-message');
-			
+
 								const name = nameInput.value.trim();
 								const status = statusSelect.value;
 								const statusText = status ? statusSelect.options[statusSelect.selectedIndex].text : '';
 								const message = messageInput.value.trim();
-			
+
 								if (!name || !status || !message) {
 									alert('Mohon lengkapi semua kolom.');
 									return;
 								}
-			
-								// Add new wish to the list
-								const newWish = document.createElement('div');
-								newWish.className = 'wish-item';
-								newWish.innerHTML = `
-									<p class="wish-author">${name}</p>
-									<p class="wish-text">${message}</p>
-									<small class="wish-meta">${statusText}</small>
-								`;
-			
-								const list = document.getElementById('wishes-list');
-								list.insertBefore(newWish, list.firstChild);
-			
-								// Update wishes count
-								const wishesCountEl = document.getElementById('wishes-count');
-								let currentCount = parseInt(wishesCountEl.textContent, 10);
-								wishesCountEl.textContent = currentCount + 1;
-			
+
+								// Always save the wish to localStorage
+								const timestamp = new Date().toISOString();
+								const wishData = { name, message, status, statusText, timestamp };
+								const allWishes = JSON.parse(localStorage.getItem(WISHES_STORAGE_KEY)) || [];
+								allWishes.push(wishData);
+								localStorage.setItem(WISHES_STORAGE_KEY, JSON.stringify(allWishes));
+
+								// Reload wishes to update the display and count
+								loadWishes();
+
 								// Reset form
 								rsvpForm.reset();
-								
 								// Re-fill guest name if it was from URL
 								try {
 									const urlParams = new URLSearchParams(window.location.search);
@@ -1314,7 +1340,7 @@ function _pauseAudio(){
 								} catch(e) {
 									console.error("Error parsing URL params for guest name:", e);
 								}
-								
+
 								// Show a success message
 								alert('Terima kasih atas ucapan dan doanya!');
 							});
@@ -1376,7 +1402,7 @@ function _pauseAudio(){
 				</div>
 				<div class="elementor-element elementor-element-2f97afa e-grid-align-mobile-center animated-slow elementor-shape-rounded elementor-grid-0 e-grid-align-center elementor-invisible elementor-widget elementor-widget-social-icons" data-id="2f97afa" data-element_type="widget" data-settings="{&quot;_animation&quot;:&quot;zoomIn&quot;,&quot;_animation_delay&quot;:50}" data-widget_type="social-icons.default">
 				<div class="elementor-widget-container">
-							<div class="elementor-social-icons-wrapper elementor-grid" role="list">
+							<div class="elementor-s	ocial-icons-wrapper elementor-grid" role="list">
 							<span class="elementor-grid-item" role="listitem">
 					<a class="elementor-icon elementor-social-icon elementor-social-icon-instagram elementor-animation-grow elementor-repeater-item-ad6b5f2" href="https://instagram.com/kekondangan.id" target="_blank">
 						<span class="elementor-screen-only">Instagram</span>
